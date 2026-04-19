@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, Shield, ShieldOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -11,6 +12,9 @@ interface UserRow {
   email: string | null;
   isAdmin: boolean;
 }
+
+type ProfileRow = Pick<Tables<"profiles">, "email" | "id">;
+type RoleRow = Pick<Tables<"user_roles">, "role" | "user_id">;
 
 export function AdminsTab() {
   const { user } = useAuth();
@@ -29,9 +33,17 @@ export function AdminsTab() {
       setLoading(false);
       return;
     }
-    const adminSet = new Set((roles ?? []).filter((r: any) => r.role === "admin").map((r: any) => r.user_id));
+    const adminSet = new Set(
+      ((roles ?? []) as RoleRow[])
+        .filter((role) => role.role === "admin")
+        .map((role) => role.user_id),
+    );
     setItems(
-      (profiles ?? []).map((p: any) => ({ id: p.id, email: p.email, isAdmin: adminSet.has(p.id) })),
+      ((profiles ?? []) as ProfileRow[]).map((profile) => ({
+        id: profile.id,
+        email: profile.email,
+        isAdmin: adminSet.has(profile.id),
+      })),
     );
     setLoading(false);
   }

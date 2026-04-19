@@ -22,6 +22,7 @@ export interface DeadlineDetail {
 interface DateDeadlinesModalProps {
   date: Date | null;
   deadlines: DeadlineDetail[];
+  loading?: boolean;
   onClose: () => void;
   storageUrl: (path: string) => string;
 }
@@ -36,7 +37,7 @@ function fileIcon(type: string | null, name: string) {
   return <FileText className="h-5 w-5 text-muted-foreground" />;
 }
 
-export function DateDeadlinesModal({ date, deadlines, onClose, storageUrl }: DateDeadlinesModalProps) {
+export function DateDeadlinesModal({ date, deadlines, loading, onClose, storageUrl }: DateDeadlinesModalProps) {
   return (
     <Dialog open={!!date} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
@@ -47,7 +48,9 @@ export function DateDeadlinesModal({ date, deadlines, onClose, storageUrl }: Dat
           </DialogTitle>
         </DialogHeader>
 
-        {deadlines.length === 0 ? (
+        {loading ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">Loading deadlines…</div>
+        ) : deadlines.length === 0 ? (
           <div className="py-8 text-center text-sm text-muted-foreground">No deadlines on this day.</div>
         ) : (
           <div className="space-y-3">

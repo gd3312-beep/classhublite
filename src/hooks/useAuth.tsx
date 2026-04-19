@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,43 +17,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const activeRequestId = useRef(0);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
+    let mounted = true;
+
+    const syncAuthState = async (sess: Session | null) => {
+      const requestId = ++activeRequestId.current;
+
       setSession(sess);
       setUser(sess?.user ?? null);
-      if (sess?.user) {
-        // Defer to avoid deadlocks
-        setTimeout(() => {
-          supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", sess.user.id)
-            .eq("role", "admin")
-            .maybeSingle()
-            .then(({ data }) => setIsAdmin(!!data));
-        }, 0);
-      } else {
+
+      if (!sess?.user) {
+        if (!mounted || requestId !== activeRequestId.current) return;
         setIsAdmin(false);
+        setLoading(false);
+        return;
       }
+
+      setLoading(true);
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", sess.user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      if (!mounted || requestId !== activeRequestId.current) return;
+
+      setIsAdmin(Boolean(data));
+      setLoading(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
+      void syncAuthState(sess);
     });
 
     supabase.auth.getSession().then(({ data: { session: sess } }) => {
-      setSession(sess);
-      setUser(sess?.user ?? null);
-      if (sess?.user) {
-        supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", sess.user.id)
-          .eq("role", "admin")
-          .maybeSingle()
-          .then(({ data }) => setIsAdmin(!!data));
-      }
+      void syncAuthState(sess);
+    }).catch(() => {
+      if (!mounted) return;
+      setIsAdmin(false);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      activeRequestId.current += 1;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {

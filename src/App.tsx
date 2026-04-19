@@ -9,12 +9,12 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
-import AdminLogin from "./pages/AdminLogin.tsx";
-import AdminSignup from "./pages/AdminSignup.tsx";
-import ForgotPassword from "./pages/ForgotPassword.tsx";
-import ResetPassword from "./pages/ResetPassword.tsx";
 
 const Admin = lazy(() => import("./pages/Admin.tsx"));
+const AdminLogin = lazy(() => import("./pages/AdminLogin.tsx"));
+const AdminSignup = lazy(() => import("./pages/AdminSignup.tsx"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword.tsx"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -34,10 +34,22 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/admin/signup" element={<AdminSignup />} />
-              <Route path="/admin/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route
+                path="/admin/login"
+                element={<Suspense fallback={<AdminLoader />}><AdminLogin /></Suspense>}
+              />
+              <Route
+                path="/admin/signup"
+                element={<Suspense fallback={<AdminLoader />}><AdminSignup /></Suspense>}
+              />
+              <Route
+                path="/admin/forgot-password"
+                element={<Suspense fallback={<AdminLoader />}><ForgotPassword /></Suspense>}
+              />
+              <Route
+                path="/reset-password"
+                element={<Suspense fallback={<AdminLoader />}><ResetPassword /></Suspense>}
+              />
               <Route
                 path="/admin"
                 element={

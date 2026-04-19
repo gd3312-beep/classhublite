@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { getAdminSignupStatus, normalizeEmail } from "@/lib/adminAuth";
 import { loginSchema } from "@/lib/validators";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -17,16 +19,50 @@ type Form = z.infer<typeof loginSchema>;
 const AdminSignup = () => {
   const nav = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [checkingSignup, setCheckingSignup] = useState(true);
+  const [signupOpen, setSignupOpen] = useState(true);
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<Form>({ resolver: zodResolver(loginSchema) });
 
+  useEffect(() => {
+    let active = true;
+
+    void getAdminSignupStatus()
+      .then((status) => {
+        if (!active) return;
+        setSignupOpen(status.signupOpen);
+        if (!status.signupOpen) {
+          toast.info("Admin account already exists. Please sign in.");
+          nav("/admin/login", { replace: true });
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        toast.error("Unable to verify signup access right now.");
+        nav("/admin/login", { replace: true });
+      })
+      .finally(() => {
+        if (active) setCheckingSignup(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [nav]);
+
   const onSubmit = async (values: Form) => {
+    if (!signupOpen) {
+      toast.error("Admin account already exists. Please sign in.");
+      nav("/admin/login", { replace: true });
+      return;
+    }
+
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: values.email,
+    const { data, error } = await supabase.auth.signUp({
+      email: normalizeEmail(values.email),
       password: values.password,
       options: { emailRedirectTo: `${window.location.origin}/admin` },
     });
@@ -35,9 +71,22 @@ const AdminSignup = () => {
       toast.error(error.message);
       return;
     }
-    toast.success("Account created. The first signup becomes admin.");
-    nav("/admin");
+    if (data.session) {
+      toast.success("Account created. The first signup becomes admin.");
+      nav("/admin", { replace: true });
+      return;
+    }
+    toast.success("Account created. Check your email to finish signing in.");
+    nav("/admin/login", { replace: true });
   };
+
+  if (checkingSignup) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-highlight border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -57,7 +106,7 @@ const AdminSignup = () => {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" autoComplete="new-password" {...register("password")} />
+              <PasswordInput id="password" autoComplete="new-password" {...register("password")} />
               {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>

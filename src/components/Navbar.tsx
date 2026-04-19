@@ -1,5 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";
-import { GraduationCap, LogOut, Shield } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { GraduationCap, LayoutDashboard, LogOut, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,8 +9,12 @@ interface NavbarProps {
 }
 
 export function Navbar({ title = "Admin Panel" }: NavbarProps) {
-  const { user, signOut } = useAuth();
+  const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const onAdminScreen = location.pathname.startsWith("/admin");
+  const destination = onAdminScreen ? "/" : "/admin";
+  const destinationLabel = onAdminScreen ? "Dashboard" : "Admin Panel";
 
   const handleSignOut = async () => {
     await signOut();
@@ -33,6 +37,15 @@ export function Navbar({ title = "Admin Panel" }: NavbarProps) {
           <ThemeToggle />
           {user ? (
             <>
+              {isAdmin && (
+                <Button asChild variant="ghost" size="sm">
+                  <Link to={destination}>
+                    <LayoutDashboard className="h-4 w-4" />
+                    <span className="hidden sm:inline">{destinationLabel}</span>
+                    <span className="sm:hidden">{onAdminScreen ? "Home" : "Panel"}</span>
+                  </Link>
+                </Button>
+              )}
               <span className="hidden sm:inline text-sm text-muted-foreground">{title}</span>
               <Button variant="ghost" size="sm" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4" />

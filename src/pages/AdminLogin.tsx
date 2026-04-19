@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { formatRetryDelay, getAdminLoginThrottleStatus, getAdminSignupStatus, normalizeEmail, recordAdminLoginAttempt } from "@/lib/adminAuth";
 import { loginSchema } from "@/lib/validators";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -17,8 +19,8 @@ type Form = z.infer<typeof loginSchema>;
 const AdminLogin = () => {
   const nav = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [attempts, setAttempts] = useState(0);
-  const [lockUntil, setLockUntil] = useState(0);
+  const [signupOpen, setSignupOpen] = useState(false);
+  const [signupKnown, setSignupKnown] = useState(false);
 
   const {
     register,
@@ -26,33 +28,85 @@ const AdminLogin = () => {
     formState: { errors },
   } = useForm<Form>({ resolver: zodResolver(loginSchema) });
 
+  const trackAttempt = async (email: string, wasSuccessful: boolean) => {
+    try {
+      return await recordAdminLoginAttempt(email, wasSuccessful);
+    } catch {
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    let active = true;
+
+    void getAdminSignupStatus()
+      .then((status) => {
+        if (!active) return;
+        setSignupOpen(status.signupOpen);
+      })
+      .catch(() => {
+        if (!active) return;
+        setSignupOpen(false);
+      })
+      .finally(() => {
+        if (active) setSignupKnown(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const onSubmit = async (values: Form) => {
-    if (Date.now() < lockUntil) {
-      const secs = Math.ceil((lockUntil - Date.now()) / 1000);
-      toast.error(`Too many attempts. Try again in ${secs}s.`);
-      return;
-    }
+    const email = normalizeEmail(values.email);
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: values.email,
-      password: values.password,
-    });
-    setLoading(false);
-    if (error) {
-      const next = attempts + 1;
-      setAttempts(next);
-      if (next >= 5) {
-        const wait = Math.min(60_000, 2_000 * Math.pow(2, next - 5));
-        setLockUntil(Date.now() + wait);
-        toast.error(`Invalid login. Locked for ${Math.ceil(wait / 1000)}s.`);
-      } else {
-        toast.error("Invalid login. Check your email and password.");
+
+    try {
+      const throttle = await getAdminLoginThrottleStatus(email);
+      if (!throttle.allowed) {
+        toast.error(`Too many attempts. Try again in ${formatRetryDelay(throttle.retryAfterSeconds)}.`);
+        return;
       }
-      return;
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: values.password,
+      });
+
+      if (error || !data.user) {
+        const attemptState = await trackAttempt(email, false);
+        if (attemptState && !attemptState.allowed) {
+          toast.error(`Too many attempts. Try again in ${formatRetryDelay(attemptState.retryAfterSeconds)}.`);
+        } else {
+          toast.error("Invalid admin email or password.");
+        }
+        return;
+      }
+
+      const { data: hasAdminRole, error: roleError } = await supabase.rpc("has_role", {
+        _user_id: data.user.id,
+        _role: "admin",
+      });
+
+      if (roleError || !hasAdminRole) {
+        await supabase.auth.signOut();
+        const attemptState = await trackAttempt(email, false);
+        if (attemptState && !attemptState.allowed) {
+          toast.error(`Too many attempts. Try again in ${formatRetryDelay(attemptState.retryAfterSeconds)}.`);
+        } else {
+          toast.error("Invalid admin email or password.");
+        }
+        return;
+      }
+
+      await trackAttempt(email, true);
+      toast.success("Welcome back");
+      nav("/admin", { replace: true });
+    } catch {
+      toast.error("Unable to sign in right now. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setAttempts(0);
-    toast.success("Welcome back");
-    nav("/admin");
   };
 
   return (
@@ -71,7 +125,7 @@ const AdminLogin = () => {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" autoComplete="current-password" {...register("password")} />
+              <PasswordInput id="password" autoComplete="current-password" {...register("password")} />
               {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
@@ -82,9 +136,13 @@ const AdminLogin = () => {
               <Link to="/admin/forgot-password" className="text-highlight hover:underline">
                 Forgot password?
               </Link>
-              <Link to="/admin/signup" className="text-muted-foreground hover:underline">
-                Create admin account
-              </Link>
+              {signupKnown && signupOpen ? (
+                <Link to="/admin/signup" className="text-muted-foreground hover:underline">
+                  Create admin account
+                </Link>
+              ) : (
+                <span className="text-muted-foreground">Admin account already exists</span>
+              )}
             </div>
           </form>
         </div>

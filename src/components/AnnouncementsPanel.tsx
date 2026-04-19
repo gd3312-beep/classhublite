@@ -32,7 +32,7 @@ function AnnouncementCard({ a }: { a: AnnouncementLite }) {
         )}
       </div>
       <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">{a.body}</p>
-      <p className="mt-3 text-xs text-muted-foreground/70">{format(new Date(a.created_at), "PP")}</p>
+      <p className="mt-3 text-xs text-muted-foreground">{format(new Date(a.created_at), "PP")}</p>
     </article>
   );
 }

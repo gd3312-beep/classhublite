@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeEmail } from "@/lib/adminAuth";
 import { emailSchema } from "@/lib/validators";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ const ForgotPassword = () => {
 
   const onSubmit = async (values: Form) => {
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizeEmail(values.email), {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     setLoading(false);

@@ -82,7 +82,7 @@ export function Calendar({ deadlines, loading, onSelectDate }: CalendarProps) {
                 className={cn(
                   "group relative flex aspect-square flex-col items-center justify-center rounded-lg text-sm transition-all",
                   "hover:bg-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  !inMonth && "text-muted-foreground/40",
+                  !inMonth && "text-muted-foreground/60",
                   today && "bg-highlight text-highlight-foreground font-semibold shadow-soft hover:bg-highlight/90",
                   !today && hasDeadline && "bg-brown-soft text-foreground font-medium",
                 )}

@@ -186,12 +186,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_admin_signup_status: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      check_admin_login_allowed: {
+        Args: {
+          email_to_check: string
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      record_admin_login_attempt: {
+        Args: {
+          email_to_track: string
+          was_successful: boolean
+        }
+        Returns: Json
       }
     }
     Enums: {
