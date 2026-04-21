@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 type Form = z.infer<typeof loginSchema>;
+type SignupStatus = { signupOpen?: boolean };
+type LoginAttemptStatus = { allowed?: boolean; retryAfterSeconds?: number };
 
 const AdminLogin = () => {
   const nav = useNavigate();

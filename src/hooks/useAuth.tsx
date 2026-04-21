@@ -24,7 +24,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const syncAuthState = async (sess: Session | null) => {
       const requestId = ++activeRequestId.current;
-
       setSession(sess);
       setUser(sess?.user ?? null);
 

@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 type Form = z.infer<typeof loginSchema>;
+type SignupStatus = { signupOpen?: boolean };
 
 const AdminSignup = () => {
   const nav = useNavigate();
@@ -95,7 +96,9 @@ const AdminSignup = () => {
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-card sm:p-8">
           <h1 className="text-2xl font-bold tracking-tight">Create admin</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            The first user to sign up automatically becomes the admin.
+            {signupOpen
+              ? "No admin exists yet, so the next signup becomes the admin."
+              : "An admin account already exists for this project."}
           </p>
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
@@ -109,8 +112,8 @@ const AdminSignup = () => {
               <PasswordInput id="password" autoComplete="new-password" {...register("password")} />
               {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+            <Button type="submit" className="w-full" disabled={loading || checkingSignup || !signupOpen}>
+              {(loading || checkingSignup) && <Loader2 className="h-4 w-4 animate-spin" />}
               Sign up
             </Button>
             <p className="text-xs text-muted-foreground">

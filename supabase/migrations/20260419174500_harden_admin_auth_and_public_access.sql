@@ -2,10 +2,8 @@ ALTER TABLE public.files DISABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public read files" ON public.files;
 DROP POLICY IF EXISTS "Admins read files" ON public.files;
 ALTER TABLE public.files ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Admins read files" ON public.files
   FOR SELECT USING (public.has_role(auth.uid(), 'admin'));
-
 CREATE TABLE IF NOT EXISTS public.admin_login_attempts (
   email TEXT PRIMARY KEY,
   failed_attempts INT NOT NULL DEFAULT 0 CHECK (failed_attempts >= 0),
@@ -13,10 +11,8 @@ CREATE TABLE IF NOT EXISTS public.admin_login_attempts (
   last_failed_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
 ALTER TABLE public.admin_login_attempts ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.admin_login_attempts FROM anon, authenticated;
-
 CREATE OR REPLACE FUNCTION public.check_admin_login_allowed(email_to_check TEXT)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -50,7 +46,6 @@ BEGIN
   );
 END;
 $$;
-
 CREATE OR REPLACE FUNCTION public.record_admin_login_attempt(email_to_track TEXT, was_successful BOOLEAN)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -99,10 +94,8 @@ BEGIN
   RETURN jsonb_build_object('allowed', false, 'retryAfterSeconds', wait_seconds);
 END;
 $$;
-
 GRANT EXECUTE ON FUNCTION public.check_admin_login_allowed(TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.record_admin_login_attempt(TEXT, BOOLEAN) TO anon, authenticated;
-
 CREATE OR REPLACE FUNCTION public.get_admin_signup_status()
 RETURNS JSONB
 LANGUAGE sql
@@ -118,9 +111,7 @@ AS $$
     )
   );
 $$;
-
 GRANT EXECUTE ON FUNCTION public.get_admin_signup_status() TO anon, authenticated;
-
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
