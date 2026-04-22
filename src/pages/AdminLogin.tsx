@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { formatRetryDelay, getAdminLoginThrottleStatus, getAdminSignupStatus, normalizeEmail, recordAdminLoginAttempt } from "@/lib/adminAuth";
+import { bootstrapCurrentUser, formatRetryDelay, getAdminLoginThrottleStatus, getAdminSignupStatus, normalizeEmail, recordAdminLoginAttempt } from "@/lib/adminAuth";
 import { loginSchema } from "@/lib/validators";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -84,6 +84,8 @@ const AdminLogin = () => {
         }
         return;
       }
+
+      await bootstrapCurrentUser();
 
       const { data: hasAdminRole, error: roleError } = await supabase.rpc("has_role", {
         _user_id: data.user.id,

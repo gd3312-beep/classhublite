@@ -186,6 +186,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bootstrap_current_user: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_admin_signup_status: {
         Args: Record<PropertyKey, never>
         Returns: Json

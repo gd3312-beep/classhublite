@@ -10,6 +10,12 @@ export interface AdminSignupStatus {
   signupOpen: boolean;
 }
 
+export interface AdminBootstrapStatus {
+  userId: string | null;
+  email: string | null;
+  role: "admin" | "user" | null;
+}
+
 const DEFAULT_THROTTLE_STATUS: AdminLoginThrottleStatus = {
   allowed: true,
   retryAfterSeconds: 0,
@@ -17,6 +23,12 @@ const DEFAULT_THROTTLE_STATUS: AdminLoginThrottleStatus = {
 
 const DEFAULT_SIGNUP_STATUS: AdminSignupStatus = {
   signupOpen: true,
+};
+
+const DEFAULT_BOOTSTRAP_STATUS: AdminBootstrapStatus = {
+  userId: null,
+  email: null,
+  role: null,
 };
 
 function isJsonObject(value: Json | null): value is Record<string, Json | undefined> {
@@ -50,6 +62,18 @@ export function parseAdminSignupStatus(payload: Json | null): AdminSignupStatus 
 
   return {
     signupOpen: typeof payload.signupOpen === "boolean" ? payload.signupOpen : true,
+  };
+}
+
+export function parseAdminBootstrapStatus(payload: Json | null): AdminBootstrapStatus {
+  if (!isJsonObject(payload)) {
+    return DEFAULT_BOOTSTRAP_STATUS;
+  }
+
+  return {
+    userId: typeof payload.userId === "string" ? payload.userId : null,
+    email: typeof payload.email === "string" ? payload.email : null,
+    role: payload.role === "admin" || payload.role === "user" ? payload.role : null,
   };
 }
 
@@ -91,4 +115,12 @@ export async function getAdminSignupStatus() {
   if (error) throw error;
 
   return parseAdminSignupStatus(data);
+}
+
+export async function bootstrapCurrentUser() {
+  const { data, error } = await supabase.rpc("bootstrap_current_user");
+
+  if (error) throw error;
+
+  return parseAdminBootstrapStatus(data);
 }

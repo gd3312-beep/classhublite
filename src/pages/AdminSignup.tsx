@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { getAdminSignupStatus, normalizeEmail } from "@/lib/adminAuth";
+import { bootstrapCurrentUser, getAdminSignupStatus, normalizeEmail } from "@/lib/adminAuth";
 import { loginSchema } from "@/lib/validators";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,7 @@ const AdminSignup = () => {
       return;
     }
     if (data.session) {
+      await bootstrapCurrentUser();
       toast.success("Account created. The first signup becomes admin.");
       nav("/admin", { replace: true });
       return;
